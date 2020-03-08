@@ -2,13 +2,13 @@
 
 [![Build Status](https://travis-ci.com/frappe/frappe_docker.svg)](https://travis-ci.com/frappe/frappe_docker)
 
-This is a repo designed to aide setting up frappe/ERPNext on docker.
+This is a repo were I will try to create a better Docker setup for your development workflow with the Frappe framework.
 
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-Unfortunately, this container is not currently suited for a production environment (but we're working towards that goal!).
+Keep in mind than this container is not suited for a production environment.
 
 ### Build the container and initialize the bench
 
@@ -17,8 +17,8 @@ Unfortunately, this container is not currently suited for a production environme
 1. Clone this repo and change your working directory to it:
 
     ```bash
-    git clone https://github.com/frappe/frappe_docker.git
-    cd frappe_docker/
+    git clone git@github.com:sebastian-code/bench_docker.git
+    cd bench_docker/
     ```
 
 2. Build and start the container, and initialize the bench:
@@ -59,10 +59,6 @@ Unfortunately, this container is not currently suited for a production environme
 - `./dbench -h`: Shows this help message.
 
 - `./dbench <bench command>`: Runs a command in bench (i.e. Running `./dbench new-site site1.local`, will run `bench new-site site1.local` in the container).
-
-## For More Info
-
-For more info on building this docker container refer to this [Wiki](https://github.com/frappe/frappe_docker/wiki/Hitchhiker's-guide-to-building-this-frappe_docker-image)
 
 ## Contributing
 
