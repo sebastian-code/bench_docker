@@ -1,69 +1,66 @@
-# Frappe on Docker
+# Getting Started with Docker environment for Frappe development
 
-[![Build Status](https://travis-ci.com/frappe/frappe_docker.svg)](https://travis-ci.com/frappe/frappe_docker)
+### Try in Play With Docker
 
-This is a repo were I will try to create a better Docker setup for your development workflow with the Frappe framework.
+<a href="https://labs.play-with-docker.com/?stack=https://raw.githubusercontent.com/frappe/frappe_docker/develop/tests/pwd.yml">
+  <img src="https://raw.githubusercontent.com/play-with-docker/stacks/master/assets/images/button.png" alt="Try in PWD"/>
+</a>
 
-## Getting Started
+Wait for 5 minutes for ERPNext site to be created or check `site-creator` container logs before opening browser on port 80. (username: `Administrator`, password: `admin`)
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+### Setting up Pre-requisites
 
-Keep in mind than this container is not suited for a production environment.
+This repository requires Docker, docker-compose and Git to be setup on the instance to be used.
 
-### Build the container and initialize the bench
+For Docker basics and best practices. Refer Docker [documentation](http://docs.docker.com).
 
-**Note:** These instructions assume you have both  [Docker](https://docs.docker.com/engine/installation)  and [Docker Compose](https://docs.docker.com/compose/install/) installed on your system.
+### Cloning the repository and preliminary steps
 
-1. Clone this repo and change your working directory to it:
+Clone this repository somewhere in your system:
 
-    ```bash
-    git clone git@github.com:sebastian-code/bench_docker.git
-    cd bench_docker/
-    ```
+```sh
+git clone https://github.com/frappe/frappe_docker.git
+cd frappe_docker
+```
 
-2. Build and start the container, and initialize the bench:
+## Production Setup
 
-    ```bash
-    ./dbench setup docker
-    ./dbench init
-    ```
+It takes care of the following:
 
-    **Note:** This will take a while, as docker will now build the container.
+* Setting up the desired version of Frappe/ERPNext.
+* Setting up all the system requirements: eg. MariaDB, Node, Redis.
+* Configure networking for remote access and setting up LetsEncrypt.
 
-3. Add a new site and start Frappe:
+It doesn't take care of the following:
 
-    ```bash
-    ./dbench new-site site1.local
-    ./dbench setup hosts
-    ./dbench start
-    ```
+* Cron Job to backup sites is not created by default.
+* Use `CronJob` on k8s or refer wiki for alternatives.
 
-4. Use Frappe:
-    Open your browser to `localhost:8000/login`. Then log in using the username `Administrator` and the password `admin`.
+1. Single Server Installs
+    1. [Single bench](docs/single-bench.md). Easiest Install!
+    2. [Multi bench](docs/multi-bench.md)
+2. Multi Server Installs
+    1. [Docker Swarm](docs/docker-swarm.md)
+    2. [Kubernetes](https://helm.erpnext.com)
+3. [Site Operations](docs/site-operations.md)
+4. [Environment Variables](docs/environment-variables.md)
+5. [Custom apps for production](docs/custom-apps-for-production.md)
+6. [Tips for moving deployments](docs/tips-for-moving-deployments.md)
+7. [Wiki for optional recipes](https://github.com/frappe/frappe_docker/wiki)
 
-### Basic Usage of `./dbench`
+## Development Setup
 
-**IMPORTANT: Always make sure that your current directory is the root directory of the repo (i.e. `frappe_docker/`)**
+It takes care of complete setup to develop with Frappe/ERPNext and Bench, Including the following features:
 
-- `./dbench`: Launches you into an interactive shell in the container as the user `frappe`.
+- VSCode containers integration
+- VSCode Python debugger
+- Pre-configured Docker containers for an easy start
 
-- `./dbench setup docker [ stop | down ]`: Starts and builds the docker containers using `docker-compose up -d`.
-  - `stop`: Stops the containers with `docker-compose stop`.
-  - `down`: Deletes the containers and the corresponding volumes with `docker-compose down`.
-
-- `./dbench setup hosts`: Adds all sites to the containers hosts file.
-  **Note:** Run this after you've added a new site to avoid errors.
-
-- `./dbench -c frappe | root <command to run>`: Runs a command in the container, as the selected user.
-
-- `./dbench -h`: Shows this help message.
-
-- `./dbench <bench command>`: Runs a command in bench (i.e. Running `./dbench new-site site1.local`, will run `bench new-site site1.local` in the container).
+[Start development](development).
 
 ## Contributing
 
-Feel free to contribute to this project and make it better.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+- [Frappe Docker Images](CONTRIBUTING.md)
+- [Frappe Framework](https://github.com/frappe/frappe#contributing)
+- [ERPNext](https://github.com/frappe/erpnext#contributing)
+- [frappe/bench](https://github.com/frappe/bench)
