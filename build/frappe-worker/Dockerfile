@@ -35,8 +35,10 @@ RUN apt-get update -y && apt-get install \
     libffi-dev \
     libjpeg-dev \
     zlib1g-dev \
-    # For psycopg2
-    libpq-dev \
+    # For specific development needs from TransUnion integration
+    libxml2-dev \
+    libxmlsec1-dev \
+    libxmlsec1-openssl \
     # For arm64 python wheel builds
     gcc \
     g++ -y \
