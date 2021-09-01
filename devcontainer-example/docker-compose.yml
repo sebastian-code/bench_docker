@@ -19,7 +19,7 @@ services:
     image: redis:alpine
 
   frappe:
-    build: ../build/
+    build: .
     command: sleep infinity
     volumes:
       - ..:/workspace:cached
