@@ -75,7 +75,6 @@ frappe-bench/*
 sites
 
 development
-!development/README.md
 deploy_key
 deploy_key.pub
 
