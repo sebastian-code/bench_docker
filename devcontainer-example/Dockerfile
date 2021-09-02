@@ -122,5 +122,7 @@ RUN node --version \
 RUN bash -c "node --version" \
     && bash -c "npm --version" \
     && bash -c "yarn --version"
+# Install Frappe v12 in the usual folder.
+RUN bench init --skip-redis-config-generation --frappe-branch version-12 frappe-bench
 
 EXPOSE 8000-8005 9000-9005 6787

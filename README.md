@@ -1,4 +1,4 @@
-# Frappe workbench with Docker
+# Getting Started with Docker environment for Frappe development
 
 ## Setting up Pre-requisites
 
@@ -21,7 +21,7 @@ In case you work with some of those wierd SO, it is recommended you allocate at 
 Clone and change directory to frappe_docker directory
 
 ```shell
-git clone https://github.com/frappe/frappe_docker.git
+git clone git@github.com:sebastian-code/bench_docker.git
 cd frappe_docker
 ```
 
