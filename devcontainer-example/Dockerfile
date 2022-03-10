@@ -94,20 +94,15 @@ RUN bash -c "bench --version"
 
 # !!! UPDATE NODEJS PERIODICALLY WITH LATEST VERSIONS !!!
 # https://nodejs.org/en/about/releases/
-# https://nodejs.org/download/release/latest-v10.x/
 # https://nodejs.org/download/release/latest-v14.x/
 ENV NODE_VERSION=14.17.0
-ENV NODE_VERSION_FRAPPEV11=10.24.1
 
 # Install nvm with node
-RUN wget https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh
+RUN wget https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh
 RUN chmod +x install.sh
 RUN ./install.sh
 ENV NVM_DIR=/home/frappe/.nvm
 
-# Install node for Frappe V11, install yarn
-RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION_FRAPPEV11}
-RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION_FRAPPEV11} && npm install -g yarn
 # Install node for latest frappe, set as default, install node
 RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}  && npm install -g yarn
@@ -122,7 +117,5 @@ RUN node --version \
 RUN bash -c "node --version" \
     && bash -c "npm --version" \
     && bash -c "yarn --version"
-# Install Frappe v12 in the usual folder.
-RUN bench init --skip-redis-config-generation --frappe-branch version-12 frappe-bench
 
 EXPOSE 8000-8005 9000-9005 6787
