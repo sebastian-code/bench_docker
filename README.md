@@ -39,39 +39,43 @@ It takes care of complete setup to develop with Frappe/ERPNext and Bench, Includ
 - VSCode Python debugger
 - Pre-configured Docker containers for an easy start
 
-## Use VSCode Remote Containers extension
-
-For most people getting started with Frappe development, the best solution is to use [VSCode Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
-
-Before opening the folder in container, determine the database that you want to use. The default is MariaDB.
+Note: Before anything else, determine the database that you want to use. The default is MariaDB.
 If you want to use PostgreSQL instead, edit `.devcontainer/docker-compose.yml` and uncomment the section for `postgresql` service, and you may also want to comment `mariadb` as well.
 
-VSCode should automatically inquire you to install the required extensions, that can also be installed manually as follows:
+There are two ways to go with a Docker setup when working with Frappe:
 
-- Install Remote - Containers for VSCode
-    - through command line `code --install-extension ms-vscode-remote.remote-containers`
-    - clicking on the Install button in the Vistual Studio Marketplace: [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-    - View: Extensions command in VSCode (Windows: Ctrl+Shift+X; macOS: Cmd+Shift+X) then search for extension `ms-vscode-remote.remote-containers`
+1. VSCode Remote Containers extension.
+2. The more traditional `docker-compose` approach.
+
+### VSCode Remote Containers extension
+
+For most people getting started with Frappe development, the best solution is to use [VSCode Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers), which can be installed through the install tool from the software.
 
 After the extensions are installed, you can:
 
 - Open frappe_docker folder in VS Code.
-    - `code .`
-- Launch the command, from Command Palette (Ctrl + Shift + P) `Execute Remote Containers : Reopen in Container`. You can also click in the bottom left corner to access the remote container menu.
+  - `code .`
+- Launch the command, from Command Palette (Ctrl + Shift + P) `Remote-Containers: Reopen in Container`. You can also click in the bottom left corner to access the remote container menu.
 
 Notes:
 
 - The `development` directory is ignored by git. It is mounted and available inside the container. Create all your benches (installations of bench, the tool that manages frappe) inside this directory.
-- nvm with node v12 and v10 is installed. Check with `nvm ls`. Node v12 is used by default.
+- Node v14 and v10 are installed. Check with `nvm ls`. Node v14 is used by default.
+
+### The docker-compose way.
+
+This goes without saying, but you obviously can
 
 ### Setup first bench
 
 Run the following commands in the terminal inside the container. You might need to create a new terminal in VSCode.
 
 ```shell
-bench init --skip-redis-config-generation --frappe-branch version-12 frappe-bench
+bench init --skip-redis-config-generation --frappe-branch version-13 frappe-bench
 cd frappe-bench
 ```
+
+Note: For version 12 use Python 3.7 by passing option to `bench init` command, e.g. `bench init --skip-redis-config-generation --frappe-branch version-12 --python python3.7 frappe-bench`
 
 ### Setup hosts
 
@@ -97,6 +101,7 @@ code Procfile
 ```
 
 Or running the following command:
+
 ```shell
 sed -i '/redis/d' ./Procfile
 ```
@@ -108,6 +113,7 @@ You can create a new site with the following command:
 ```shell
 bench new-site sitename --no-mariadb-socket
 ```
+
 sitename MUST end with .localhost for trying deployments locally.
 
 for example:
@@ -163,14 +169,14 @@ To install custom app
 
 ```shell
 # --branch is optional, use it to point to branch on custom app repository
-bench get-app --branch version-12 myapp https://github.com/myusername/myapp.git
+bench get --branch version-12 https://github.com/myusername/myapp
 bench --site mysite.localhost install-app myapp
 ```
 
 To install ERPNext (from the version-12 branch):
 
 ```shell
-bench get-app --branch version-12 erpnext https://github.com/frappe/erpnext.git
+bench get --branch version-12 erpnext
 bench --site mysite.localhost install-app erpnext
 ```
 
@@ -217,6 +223,8 @@ You can now login with user `Administrator` and the password you choose when cre
 
 To debug workers, skip starting worker with honcho and start it with VSCode debugger.
 
+For advance vscode configuration in the devcontainer, change the config files in `development/.vscode`.
+
 ## Developing using the interactive console
 
 You can launch a simple interactive shell console in the terminal with:
@@ -235,12 +243,13 @@ The first step is installing and updating the required software. Usually the fra
 /workspace/development/frappe-bench/env/bin/python -m pip install --upgrade jupyter ipykernel ipython
 ```
 
-Then, run the commmand `Python: Show Python interactive window` from the VSCode command palette.
+Then, run the command `Python: Show Python interactive window` from the VSCode command palette.
 
 Replace `mysite.localhost` with your site and run the following code in a Jupyter cell:
 
 ```python
 import frappe
+
 frappe.init(site='mysite.localhost', sites_path='/workspace/development/frappe-bench/sites')
 frappe.connect()
 frappe.local.lang = frappe.db.get_default('lang')
@@ -249,44 +258,12 @@ frappe.db.connect()
 
 The first command can take a few seconds to be executed, this is to be expected.
 
-### Fixing MariaDB issues after rebuilding the container
-
-For any reason after rebuilding the container if you are not be able to access MariaDB correctly with the previous configuration. Follow these instructions.
-
-The parameter `'db_name'@'%'` needs to be set in MariaDB and permission to the site database suitably assigned to the user.
-
-This step has to be repeated for all sites available under the current bench.
-Example shows the queries to be executed for site `localhost`
-
-Open sites/localhost/site_config.json:
-
-
-```shell
-code sites/localhost/site_config.json
-```
-
-and take note of the parameters `db_name` and `db_password`.
-
-Enter MariaDB Interactive shell:
-
-```shell
-mysql -uroot -p123 -hmariadb
-```
-
-Execute following queries replacing `db_name` and `db_password` with the values found in site_config.json.
-
-```sql
-UPDATE mysql.user SET Host = '%' where User = 'db_name'; FLUSH PRIVILEGES;
-SET PASSWORD FOR 'db_name'@'%' = PASSWORD('db_password'); FLUSH PRIVILEGES;
-GRANT ALL PRIVILEGES ON `db_name`.* TO 'db_name'@'%'; FLUSH PRIVILEGES;
-EXIT;
-```
-
 ## Manually start containers
 
 In case you don't use VSCode, you may start the containers manually with the following command:
 
 ### Running the containers
+
 ```shell
 docker-compose -f .devcontainer/docker-compose.yml up -d
 ```
