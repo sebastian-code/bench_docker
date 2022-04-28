@@ -1,18 +1,21 @@
-# Frappe Bench Dockerfile
-FROM debian:buster-slim
+FROM debian:bullseye-slim as bench
+
+LABEL author=frappé
 
 ARG GIT_REPO=https://github.com/frappe/bench.git
 ARG GIT_BRANCH=develop
 
-LABEL author=Fianzacredito
-
-RUN apt-get update -y && apt-get install  \
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+    # For frappe framework
     git \
-    wkhtmltopdf \
     mariadb-client \
     postgresql-client \
     gettext-base \
     wget \
+    # for ERPNext v12
+    # TODO: Remove after v12 is deprecated
+    python2 \
     # for PDF
     libssl-dev \
     fonts-cantarell \
@@ -29,93 +32,115 @@ RUN apt-get update -y && apt-get install  \
     watch \
     tree \
     nano \
+    less \
     software-properties-common \
     bash-completion \
-    # For specific development needs from TransUnion integration
-    libxml2-dev \
-    libxmlsec1-dev \
-    libxmlsec1-openssl \
     # For psycopg2
     libpq-dev \
     # Other
     libffi-dev \
     liblcms2-dev \
     libldap2-dev \
-    libmariadbclient-dev \
+    libmariadb-dev \
     libsasl2-dev \
     libtiff5-dev \
     libwebp-dev \
     redis-tools \
     rlwrap \
     tk8.6-dev \
+    libbz2-dev \
     ssh-client \
+    # For specific development needs from TransUnion integration
+    libxml2-dev \
+    libxmlsec1-dev \
+    libxmlsec1-openssl \
     # VSCode container requirements
     net-tools \
-    # PYTHON
-    python3-dev \
-    python3-pip \
-    python3-setuptools \
-    python3-tk \
-    python-virtualenv \
-    less -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
     && dpkg-reconfigure --frontend=noninteractive locales
 
-# Detect arch, download and install wkhtmltox
-RUN if [ `uname -m` = 'aarch64' ]; then export ARCH=arm64; fi \
-    && if [ `uname -m` = 'x86_64' ]; then export ARCH=amd64; fi \
-    && wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.buster_${ARCH}.deb \
-    && dpkg -i wkhtmltox_0.12.6-1.buster_${ARCH}.deb && rm wkhtmltox_0.12.6-1.buster_${ARCH}.deb
+# Detect arch and install wkhtmltopdf
+ENV WKHTMLTOPDF_VERSION 0.12.6-1
+RUN if [ "$(uname -m)" = "aarch64" ]; then export ARCH=arm64; fi \
+    && if [ "$(uname -m)" = "x86_64" ]; then export ARCH=amd64; fi \
+    && downloaded_file=wkhtmltox_$WKHTMLTOPDF_VERSION.buster_${ARCH}.deb \
+    && wget -q https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOPDF_VERSION/$downloaded_file \
+    && dpkg -i $downloaded_file \
+    && rm $downloaded_file
 
-# Create new user with home directory, improve docker compatibility with UID/GID 1000, add user to sudo group, allow passwordless sudo, switch to that user and change directory to user home directory
-RUN groupadd -g 1000 frappe
-RUN useradd --no-log-init -r -m -u 1000 -g 1000 -G  sudo frappe
-RUN echo "frappe ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+# Create new user with home directory, improve docker compatibility with UID/GID 1000,
+# add user to sudo group, allow passwordless sudo, switch to that user
+# and change directory to user home directory
+RUN groupadd -g 1000 frappe \
+    && useradd --no-log-init -r -m -u 1000 -g 1000 -G sudo frappe \
+    && echo "frappe ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
 USER frappe
 WORKDIR /home/frappe
 
+# Install Python via pyenv
+# Python 3.7 sits here for ERPNext version-12
+# TODO: Remove Python 3.7 when version-12 will not be supported
+ENV PYTHON_VERSION_V12=3.7.12
+ENV PYTHON_VERSION=3.9.9
+ENV PYENV_ROOT /home/frappe/.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
+
+# From https://github.com/pyenv/pyenv#basic-github-checkout
+RUN git clone --depth 1 https://github.com/pyenv/pyenv.git .pyenv \
+    && pyenv install $PYTHON_VERSION_V12 \
+    && pyenv install $PYTHON_VERSION \
+    && pyenv global $PYTHON_VERSION $PYTHON_VERSION_V12 \
+    && sed -Ei -e '/^([^#]|$)/ {a export PYENV_ROOT="/home/frappe/.pyenv" a export PATH="$PYENV_ROOT/bin:$PATH" a ' -e ':a' -e '$!{n;ba};}' ~/.profile \
+    && echo 'eval "$(pyenv init --path)"' >>~/.profile \
+    && echo 'eval "$(pyenv init -)"' >>~/.bashrc
+
 # Clone and install bench in the local user home directory
 # For development, bench source is located in ~/.bench
-RUN git clone ${GIT_REPO} -b ${GIT_BRANCH} .bench \
-    && pip3 install --user -e .bench
+ENV PATH /home/frappe/.local/bin:$PATH
+# Skip editable-bench warning
+# https://github.com/frappe/bench/commit/20560c97c4246b2480d7358c722bc9ad13606138
+RUN git clone ${GIT_REPO} --depth 1 -b ${GIT_BRANCH} .bench \
+    && pip install --user -e .bench \
+    && echo "export PATH=/home/frappe/.local/bin:\$PATH" >>/home/frappe/.bashrc \
+    && echo "export BENCH_DEVELOPER=1" >>/home/frappe/.bashrc
 
-# Export python executables for Dockerfile
-ENV PATH=/home/frappe/.local/bin:$PATH
-# Export python executables for interactive shell
-RUN echo "export PATH=/home/frappe/.local/bin:\$PATH" >> /home/frappe/.bashrc
+# Install Node via nvm
+ENV NODE_VERSION=14.18.1
+ENV NODE_VERSION_FRAPPEV11=10.24.1
+ENV NVM_DIR /home/frappe/.nvm
+ENV PATH ${NVM_DIR}/versions/node/v${NODE_VERSION}/bin/:${PATH}
 
-# Print version and verify bashrc is properly sourced so that everything works in the Dockerfile
-RUN bench --version
-# Print version and verify bashrc is properly sourced so that everything works in the interactive shell
-RUN bash -c "bench --version"
+RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash \
+    && . ${NVM_DIR}/nvm.sh \
+    && nvm install ${NODE_VERSION_FRAPPEV11} \
+    && nvm use v${NODE_VERSION_FRAPPEV11} \
+    && npm install -g yarn \
+    && nvm install ${NODE_VERSION} \
+    && nvm use v${NODE_VERSION} \
+    && npm install -g yarn \
+    && nvm alias default v${NODE_VERSION} \
+    && rm -rf ${NVM_DIR}/.cache \
+    && echo 'export NVM_DIR="/home/frappe/.nvm"' >>~/.bashrc \
+    && echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.bashrc \
+    && echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.bashrc
 
-# !!! UPDATE NODEJS PERIODICALLY WITH LATEST VERSIONS !!!
-# https://nodejs.org/en/about/releases/
-# https://nodejs.org/download/release/latest-v14.x/
-ENV NODE_VERSION=14.17.0
-
-# Install nvm with node
-RUN wget https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh
-RUN chmod +x install.sh
-RUN ./install.sh
-ENV NVM_DIR=/home/frappe/.nvm
-
-# Install node for latest frappe, set as default, install node
-RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
-RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}  && npm install -g yarn
-RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
-ENV PATH="/home/frappe/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
-
-# Print version and verify bashrc is properly sourced so that everything works in the Dockerfile
-RUN node --version \
-    && npm --version \
-    && yarn --version
-# Print version and verify bashrc is properly sourced so that everything works in the interactive shell
-RUN bash -c "node --version" \
-    && bash -c "npm --version" \
-    && bash -c "yarn --version"
 
 EXPOSE 8000-8005 9000-9005 6787
+
+FROM bench as bench-test
+
+# Print version and verify bashrc is properly sourced so that everything works
+# in the interactive shell and Dockerfile
+
+RUN node --version \
+    && npm --version \
+    && yarn --version \
+    && bench --help
+
+RUN bash -c "node --version" \
+    && bash -c "npm --version" \
+    && bash -c "yarn --version" \
+    && bash -c "bench --help"

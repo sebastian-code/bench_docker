@@ -30,7 +30,8 @@ services:
     image: redis:alpine
 
   frappe:
-    image: frappe/bench:latest
+    # image: frappe/bench:latest
+    build: .
     command: sleep infinity
     environment:
       - SHELL=/bin/bash
