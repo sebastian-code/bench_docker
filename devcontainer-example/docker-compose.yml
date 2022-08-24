@@ -30,7 +30,6 @@ services:
     image: redis:alpine
 
   frappe:
-    # image: frappe/bench:latest
     build: .
     command: sleep infinity
     environment:
@@ -43,5 +42,4 @@ services:
       - 9000-9005:9000-9005
 
 volumes:
-  mariadb-data:
-  postgresql-data:
+  mariadb-data: # postgresql-data:
